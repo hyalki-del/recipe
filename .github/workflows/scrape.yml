@@ -21,10 +21,6 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        uses: py-actions/pip-dependency-install@v4
-        with:
-          sub-path: ""
-      - name: Install requirements manually
         run: pip install requests beautifulsoup4
 
       - name: Run scraper script
