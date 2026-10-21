@@ -4,7 +4,7 @@ import os
 
 input_file = 'rec.json'
 
-def process_recipes():
+def remove_urls():
     if not os.path.exists(input_file):
         print(f"Error: {input_file} not found.")
         return
@@ -14,7 +14,7 @@ def process_recipes():
         content = f.read()
 
     data = None
-    # Try standard JSON parsing first, fallback to literal eval if single quotes are used
+    # Try standard JSON parsing first, fallback to Python literal if needed
     try:
         data = json.loads(content)
         print("Successfully loaded using standard JSON parser.")
@@ -28,47 +28,22 @@ def process_recipes():
             print(f"Error: Could not parse file. Details: {err}")
             return
 
-    cleaned_data = []
-    print(f"Processing {len(data):,} records...")
+    print(f"Processing {len(data):,} records to remove URLs...")
     
+    url_count = 0
     for item in data:
-        # Skip if the item is not a dictionary (e.g. empty rows or invalid entries)
-        if not isinstance(item, dict):
-            continue
+        if isinstance(item, dict):
+            # Find and remove any key named 'url' (case-insensitive)
+            keys_to_remove = [k for k in item.keys() if k.lower() == 'url']
+            for k in keys_to_remove:
+                del item[k]
+                url_count += 1
 
-        # Extract target fields (ignoring 'url' and other metadata completely)
-        name = item.get("name") or item.get("title")
-        ingredients = item.get("ingredients")
-        instructions = item.get("instructions")
-
-        # Check if the row is effectively empty (name, ingredients, and instructions are all blank/empty)
-        is_empty = True
-        if name or ingredients or instructions:
-            # Verify they contain actual text/data, not just empty strings or empty lists
-            has_name = isinstance(name, str) and name.strip() != ""
-            has_ingredients = bool(ingredients) # works for non-empty lists or strings
-            has_instructions = bool(instructions)
-            
-            if has_name or has_ingredients or has_instructions:
-                is_empty = False
-
-        # If the row is empty, skip it (do not add to cleaned_data)
-        if is_empty:
-            continue
-
-        # Build the clean item containing ONLY name, ingredients, and instructions
-        cleaned_item = {
-            "name": name,
-            "ingredients": ingredients,
-            "instructions": instructions
-        }
-        cleaned_data.append(cleaned_item)
-
-    print(f"Saving cleaned data back to {input_file} ({len(cleaned_data):,} valid records kept)...")
+    print(f"Removed URLs from {url_count:,} records. Saving updated file...")
     with open(input_file, 'w', encoding='utf-8') as f:
-        json.dump(cleaned_data, f, ensure_ascii=False, indent=4)
+        json.dump(data, f, ensure_ascii=False, indent=4)
     
-    print("Processing completed successfully!")
+    print("Done! All URLs have been removed successfully.")
 
 if __name__ == "__main__":
-    process_recipes()
+    remove_urls()
