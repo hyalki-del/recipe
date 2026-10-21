@@ -3,8 +3,9 @@ import ast
 import os
 
 input_file = 'rec.json'
+output_file = 'recs.json'
 
-def remove_urls():
+def clean_recipes():
     if not os.path.exists(input_file):
         print(f"Error: {input_file} not found.")
         return
@@ -14,7 +15,8 @@ def remove_urls():
         content = f.read()
 
     data = None
-    # Try standard JSON parsing first, fallback to Python literal if needed
+    
+    # Attempt 1: Standard JSON load
     try:
         data = json.loads(content)
         print("Successfully loaded using standard JSON parser.")
@@ -28,22 +30,29 @@ def remove_urls():
             print(f"Error: Could not parse file. Details: {err}")
             return
 
+    if not isinstance(data, list):
+        print("Error: The loaded data is not a list of recipes.")
+        return
+
     print(f"Processing {len(data):,} records to remove URLs...")
     
     url_count = 0
+    cleaned_data = []
+    
     for item in data:
         if isinstance(item, dict):
-            # Find and remove any key named 'url' (case-insensitive)
-            keys_to_remove = [k for k in item.keys() if k.lower() == 'url']
+            # Remove any key that is 'url' or contains 'url' (case-insensitive)
+            keys_to_remove = [k for k in item.keys() if 'url' in k.lower()]
             for k in keys_to_remove:
                 del item[k]
                 url_count += 1
+        cleaned_data.append(item)
 
-    print(f"Removed URLs from {url_count:,} records. Saving updated file...")
-    with open(input_file, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    print(f"Removed URLs from {url_count:,} records. Saving to {output_file}...")
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(cleaned_data, f, ensure_ascii=False, indent=4)
     
-    print("Done! All URLs have been removed successfully.")
+    print(f"Success! All remaining info has been written to '{output_file}'.")
 
 if __name__ == "__main__":
-    remove_urls()
+    clean_recipes()
