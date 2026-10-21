@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Tariflerim</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .recipe-card { border: 1px solid #ddd; padding: 20px; margin-bottom: 15px; border-radius: 8px; }
+        h2 { color: #333; }
+    </style>
+</head>
+<body>
+
+    <h1>Tarif Arşivim</h1>
+    <div id="recipe-container">Yükleniyor...</div>
+
+    <script>
+        fetch('recipes.json')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('recipe-container');
+                container.innerHTML = ''; // Clear loading text
+                
+                data.forEach(recipe => {
+                    const card = document.createElement('div');
+                    card.className = 'recipe-card';
+                    card.innerHTML = `
+                        <h2><a href="${recipe.url}" target="_blank">${recipe.title}</a></h2>
+                        <p><strong>Malzemeler:</strong> ${recipe.ingredients.slice(0, 5).join(', ')}...</p>
+                    `;
+                    container.appendChild(card);
+                });
+            })
+            .catch(error => console.error('Hata:', error));
+    </script>
+
+</body>
+</html>
