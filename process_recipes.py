@@ -1,4 +1,5 @@
 import json
+import ast
 import os
 
 input_file = 'rec.json'
@@ -6,37 +7,51 @@ output_file = 'recs.json'
 
 def process_file():
     if not os.path.exists(input_file):
-        print(f"Error: {input_file} not found.")
+        print(f"CRITICAL ERROR: '{input_file}' does not exist in the repository.")
         return
 
-    print(f"Loading {input_file}...")
+    print(f"Loading '{input_file}'...")
     with open(input_file, 'r', encoding='utf-8') as f:
-        content = f.read().strip()
+        content = f.read()
 
-    data = []
+    data = None
 
-    # 1. Try parsing as a standard JSON file first
+    # Step 1: Try standard JSON parsing
     try:
         data = json.loads(content)
-        print("Successfully loaded as standard JSON.")
-    except json.JSONDecodeError:
-        print("Standard JSON load failed. Parsing as line-by-line JSON (JSON Lines)...")
+        print("-> Successfully loaded as standard JSON.")
+    except Exception as e1:
+        print(f"-> Standard JSON load failed: {e1}")
+        
+        # Step 2: Try Python literal eval (handles single quotes and Python dict exports)
         try:
-            for line in content.splitlines():
-                line = line.strip()
-                if line:
-                    # Remove trailing comma if present in export formats
-                    if line.endswith(','):
-                        line = line[:-1].strip()
-                    data.append(json.loads(line))
-            print(f"Successfully loaded {len(data):,} rows line-by-line.")
-        except Exception as e:
-            print(f"Error: Could not parse file format. Details: {e}")
-            return
+            print("-> Attempting to parse as Python literal structure (single quotes)...")
+            data = ast.literal_eval(content)
+            print("-> Successfully loaded using ast.literal_eval.")
+        except Exception as e2:
+            print(f"-> Python literal eval failed: {e2}")
+            
+            # Step 3: Try line-by-line JSON (JSON Lines format)
+            try:
+                print("-> Attempting to parse line-by-line (JSONL)...")
+                data = []
+                for line in content.splitlines():
+                    line = line.strip()
+                    if line:
+                        if line.endswith(','):
+                            line = line[:-1].strip()
+                        try:
+                            data.append(json.loads(line))
+                        except Exception:
+                            pass
+                print(f"-> Successfully loaded {len(data):,} rows line-by-line.")
+            except Exception as e3:
+                print(f"-> Line-by-line parse failed: {e3}")
 
-    # Ensure data is treated as a list of records
-    if not isinstance(data, list):
-        data = [data]
+    # Validate that we successfully loaded data into a list
+    if not data or not isinstance(data, list):
+        print(f"CRITICAL ERROR: Could not parse '{input_file}' into a valid list of records. Data type found: {type(data)}")
+        return
 
     print(f"Processing {len(data):,} records to remove URLs...")
     url_count = 0
@@ -51,11 +66,16 @@ def process_file():
                 url_count += 1
         cleaned_data.append(item)
 
-    print(f"Removed URLs from {url_count:,} records. Saving to {output_file}...")
+    print(f"Removed URLs from {url_count:,} records. Writing to '{output_file}'...")
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(cleaned_data, f, ensure_ascii=False, indent=4)
 
-    print(f"Success! All data cleaned and saved to '{output_file}'.")
+    # Verify output file
+    if os.path.exists(output_file):
+        file_size = os.path.getsize(output_file)
+        print(f"SUCCESS! '{output_file}' created successfully. File size: {file_size:,} bytes.")
+    else:
+        print(f"ERROR: Failed to generate '{output_file}'.")
 
 if __name__ == "__main__":
     process_file()
